@@ -18,9 +18,10 @@ def _resolve_dotted(maybe_dotted):
     if not isinstance(maybe_dotted, basestring):
         return maybe_dotted
 
-    return DottedNameResolver(None).resolve(maybe_dotted)
+    return DottedNameResolver().resolve(maybe_dotted)
 
 
+# noinspection PyAbstractClass
 class KottiAppDirective(Directive):
     """ Base class for directives that need a fully setup Kotti application """
 

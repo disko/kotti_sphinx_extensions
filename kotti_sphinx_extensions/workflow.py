@@ -78,11 +78,13 @@ class WorkflowGraph(object):
                                                from_state=s['name']))
         return transitions
 
-    def _format_node_attrs(self, attrs):
+    @staticmethod
+    def _format_node_attrs(attrs):
 
         return ','.join(['%s=%s' % x for x in attrs.items()])
 
-    def _format_graph_attrs(self, attrs):
+    @staticmethod
+    def _format_graph_attrs(attrs):
 
         return ''.join(['%s=%s;\n' % x for x in attrs.items()])
 
@@ -114,15 +116,15 @@ class WorkflowGraph(object):
             n_attrs.update(env.config.workflow_node_attrs)
             e_attrs.update(env.config.workflow_edge_attrs)
 
-        res = []
-        res.append(u'digraph "%s" {' % name)
-        res.append(self._format_graph_attrs(g_attrs))
+        res = [u'digraph "%s" {' % name, self._format_graph_attrs(g_attrs)]
 
         for s in self.states:
             this_node_attrs = n_attrs.copy()
             if s['initial']:
                 this_node_attrs['peripheries'] = 2
-            this_node_attrs['label'] = u'"{} ({})"'.format(s['title'], s['name'])
+            this_node_attrs['label'] = u'"{} ({})"'.format(
+                s['title'],
+                s['name'])
             res.append(u'  "{}" [{}];'.format(
                 s['name'],
                 self._format_node_attrs(this_node_attrs)))
@@ -156,8 +158,8 @@ class WorkflowDiagram(KottiAppDirective):
         try:
             graph = WorkflowGraph(dotted)
         except WorkflowException as err:
-            return [node.document.reporter.warning(err.args[0],
-                line=self.lineno)]
+            return [node.document.reporter.warning(
+                err.args[0], line=self.lineno)]
 
         node['code'] = graph.generate_dot(self.name)
         node['options'] = {}

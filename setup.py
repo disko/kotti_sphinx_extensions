@@ -25,7 +25,7 @@ install_requires = [
 setup(
     name='kotti_sphinx_extensions',
     version=version,
-    description="Sphinx extension to ease documentation of Kotti projects",
+    description="Sphinx extensions to ease documentation of Kotti projects",
     long_description='\n\n'.join([README, CHANGES]),
     classifiers=[
         "Programming Language :: Python",
