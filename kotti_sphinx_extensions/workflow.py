@@ -10,7 +10,7 @@ from docutils.nodes import paragraph
 from kotti.workflow import get_workflow
 from sphinx.ext.graphviz import graphviz, figure_wrapper
 
-from kotti_sphinx_extensions import KottiAppDirective
+from kotti_sphinx_extensions import KottiAppDirective, GraphvizMixin
 from kotti_sphinx_extensions import _resolve_dotted
 
 
@@ -18,25 +18,12 @@ class WorkflowException(Exception):
     pass
 
 
-class WorkflowGraph(object):
+class Workflow(GraphvizMixin):
     """ Given a content object, its class or dotted name, determines the
-    workflow in action for the given ``kotti_ini``, and then generates a
-    graphviz dot graph for the workflow states and transitions.
+    workflow in action for the given ``kotti_ini``.  Provides all data needed
+    by directives, e.g. a graphviz dot graph for the workflow states and
+    transitions.
     """
-
-    # Default attrs for graphviz
-    default_graph_attrs = {
-        'rankdir': 'LR',
-        'size': '"8.0, 12.0"',
-    }
-    default_node_attrs = {
-        'shape': 'oval',
-        # 'style': '"setlinewidth(0.5)"',
-    }
-    default_edge_attrs = {
-        'arrowsize': 0.5,
-        # 'style': '"setlinewidth(0.5)"',
-    }
 
     def __init__(self, content):
         """ *content* is either an instance, a class or a dotted name of a class
@@ -62,14 +49,14 @@ class WorkflowGraph(object):
 
     @property
     def states(self):
-        """ States of the associated workflow (if any). """
+        """ States of :meth:`workflow` (if any). """
 
         wf = self.workflow
         return wf and wf._state_info(self.content) or []
 
     @property
     def transitions(self):
-        """ Transitions of the associated workflow (if any). """
+        """ Transitions of :meth:`workflow` (if any). """
 
         transitions = []
         for s in self.states:
@@ -78,68 +65,49 @@ class WorkflowGraph(object):
                                                from_state=s['name']))
         return transitions
 
-    @staticmethod
-    def _format_node_attrs(attrs):
-
-        return ','.join(['%s=%s' % x for x in attrs.items()])
-
-    @staticmethod
-    def _format_graph_attrs(attrs):
-
-        return ''.join(['%s=%s;\n' % x for x in attrs.items()])
-
-    def generate_dot(self, name, env=None, graph_attrs=None, node_attrs=None,
-                     edge_attrs=None):
-        """ Generate a graphviz dot graph for the workflow configured for the
-        class that was passed in to __init__.
-
-        *name* is the name of the graph.
-
-        *graph_attrs*, *node_attrs*, *edge_attrs* are dictionaries containing
-        key/value pairs to pass on as graphviz properties.
-        """
-
-        g_attrs = self.default_graph_attrs.copy()
-        if graph_attrs is not None:
-            g_attrs.update(graph_attrs)
-
-        n_attrs = self.default_node_attrs.copy()
-        if node_attrs is not None:
-            n_attrs.update(node_attrs)
-
-        e_attrs = self.default_edge_attrs.copy()
-        if edge_attrs is not None:
-            e_attrs.update(edge_attrs)
-
-        if env:
-            g_attrs.update(env.config.workflow_graph_attrs)
-            n_attrs.update(env.config.workflow_node_attrs)
-            e_attrs.update(env.config.workflow_edge_attrs)
-
-        res = [u'digraph "%s" {' % name, self._format_graph_attrs(g_attrs)]
-
+    @property
+    def permissions(self):
+        """ Permissions managed by :meth:`workflow`"""
+        perms = []
         for s in self.states:
-            this_node_attrs = n_attrs.copy()
+            for k, v in s['data'].items():
+                if k.startswith('role:'):
+                    perms.extend(v.split(' '))
+        return sorted(list(set(perms)))
+
+    @property
+    def roles(self):
+        """ Roles managed by :meth:`workflow`"""
+        roles = []
+        for s in self.states:
+            roles.extend([k.split(':')[1] for k in s['data'].keys() if
+                          k.startswith('role:')])
+        return sorted(list(set(roles)))
+
+    def generate_dot_nodes(self, node_attrs):
+        nodes = []
+        for s in self.states:
+            this_node_attrs = node_attrs.copy()
             if s['initial']:
                 this_node_attrs['peripheries'] = 2
             this_node_attrs['label'] = u'"{} ({})"'.format(
                 s['title'],
                 s['name'])
-            res.append(u'  "{}" [{}];'.format(
+            nodes.append(u'  "{}" [{}];'.format(
                 s['name'],
                 self._format_node_attrs(this_node_attrs)))
+        return nodes
 
+    def generate_dot_edges(self, edge_attrs):
+        edges = []
         for t in self.transitions:
-            this_edge_attrs = e_attrs.copy()
+            this_edge_attrs = edge_attrs.copy()
             this_edge_attrs['label'] = u'"{}"'.format(t.get('title', u''))
-            res.append(u'  "{}" -> "{}" [{}];'.format(
+            edges.append(u'  "{}" -> "{}" [{}];'.format(
                 t['from_state'],
                 t['to_state'],
                 self._format_node_attrs(this_edge_attrs)))
-
-        res.append('}')
-
-        return u'\n'.join(res)
+        return edges
 
 
 class WorkflowDiagram(KottiAppDirective):
@@ -156,12 +124,12 @@ class WorkflowDiagram(KottiAppDirective):
 
         # Create a graph for ``dotted``.
         try:
-            graph = WorkflowGraph(dotted)
+            workflow = Workflow(dotted)
         except WorkflowException as err:
             return [node.document.reporter.warning(
                 err.args[0], line=self.lineno)]
 
-        node['code'] = graph.generate_dot(self.name)
+        node['code'] = workflow.generate_dot(self.name)
         node['options'] = {}
         if 'graphviz_dot' in self.options:
             node['options']['graphviz_dot'] = self.options['graphviz_dot']
