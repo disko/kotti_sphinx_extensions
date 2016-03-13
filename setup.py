@@ -29,6 +29,7 @@ setup(
     long_description='\n\n'.join([README, CHANGES]),
     classifiers=[
         "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "License :: Repoze Public License",
     ],
