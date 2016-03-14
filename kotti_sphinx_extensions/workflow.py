@@ -221,13 +221,6 @@ class WorkflowDirective(KottiAppDirective):
         node = compound()
         dotted = self.arguments[0].split()[0]
 
-        # Get the workflow for ``dotted``.
-        try:
-            workflow = Workflow(dotted)
-        except WorkflowException as err:
-            return [node.document.reporter.warning(
-                err.args[0], line=self.lineno)]
-
         self.rst = [
             u'.. workflow-diagram::',
             u'   {}'.format(dotted),
