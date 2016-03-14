@@ -6,12 +6,14 @@ Almost everything in this module is copied from
 
 from inspect import isclass
 
-from docutils.nodes import paragraph, section, compound
+from docutils.nodes import compound
 from docutils.statemachine import ViewList
 from kotti.workflow import get_workflow
-from sphinx.ext.graphviz import graphviz, figure_wrapper
+from sphinx.ext.graphviz import figure_wrapper
+from sphinx.ext.graphviz import graphviz
 
-from kotti_sphinx_extensions import KottiAppDirective, GraphvizMixin
+from kotti_sphinx_extensions import GraphvizMixin
+from kotti_sphinx_extensions import KottiAppDirective
 from kotti_sphinx_extensions import _resolve_dotted
 
 

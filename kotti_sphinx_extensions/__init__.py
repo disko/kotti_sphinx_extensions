@@ -105,6 +105,8 @@ class GraphvizMixin(object):
 
 
 def setup(app):
+    # setup dependency extionsions
+    app.setup_extension('sphinx.ext.graphviz')
 
     from kotti_sphinx_extensions.workflow import WorkflowDiagram
     app.add_directive('workflow-diagram', WorkflowDiagram)
