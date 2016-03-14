@@ -108,11 +108,14 @@ def setup(app):
     # setup dependency extionsions
     app.setup_extension('sphinx.ext.graphviz')
 
-    from kotti_sphinx_extensions.workflow import WorkflowDiagram
-    app.add_directive('workflow-diagram', WorkflowDiagram)
+    from kotti_sphinx_extensions.workflow import WorkflowDirective
+    app.add_directive('workflow', WorkflowDirective)
 
-    from kotti_sphinx_extensions.workflow import WorkflowPermissionMapping
-    app.add_directive('workflow-permissionmapping', WorkflowPermissionMapping)
+    from kotti_sphinx_extensions.workflow import WorkflowDiagramDirective
+    app.add_directive('workflow-diagram', WorkflowDiagramDirective)
+
+    from kotti_sphinx_extensions.workflow import WorkflowPermissionMappingDirective
+    app.add_directive('workflow-permissionmapping', WorkflowPermissionMappingDirective)
 
     app.add_config_value('kotti_ini', {}, False),
 

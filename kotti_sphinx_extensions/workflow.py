@@ -113,7 +113,7 @@ class Workflow(GraphvizMixin):
         return edges
 
 
-class WorkflowDiagram(KottiAppDirective):
+class WorkflowDiagramDirective(KottiAppDirective):
     """ """
 
     required_arguments = 1
@@ -148,7 +148,7 @@ class WorkflowDiagram(KottiAppDirective):
         return [node]
 
 
-class WorkflowPermissionMapping(KottiAppDirective):
+class WorkflowPermissionMappingDirective(KottiAppDirective):
     """ """
 
     required_arguments = 1
@@ -171,20 +171,16 @@ class WorkflowPermissionMapping(KottiAppDirective):
 
         for state in workflow.states:
             # section title
-            title = u'Role to Permissions mapping for state {} ({})'.format(
+            title = u'Role to Permissions mapping for state "{}" ({})'.format(
                 state['title'], state['name'])
-            # self.rst.append(t)
-            # self.rst.append(len(t) * '_')
-            # self.rst.append('')
 
-            # table
             # table format
             self.rst.append(u'.. tabularcolumns:: |R|{}|'.format(
                 u'|'.join(['C'] * len(workflow.permissions)))
             )
             self.rst.append(u'.. csv-table:: {}'.format(title))
             # table header
-            thead = ['Roles / Permissions', ]
+            thead = ['Role / Permission', ]
             thead.extend([c for c in workflow.permissions])
             self.rst.append(u'   :header: {}'.format(
                 u','.join(u'"{}"'.format(c) for c in thead)
@@ -202,6 +198,43 @@ class WorkflowPermissionMapping(KottiAppDirective):
                 self.rst.append(u'   {}'.format(
                     u','.join(u'"{}"'.format(c) for c in trow)
                 ))
+
+        result = ViewList()
+        result.append(u'', self.directive)
+        for r in self.rst:
+            result.append(r, self.directive)
+        result.append(u'', self.directive)
+
+        self.state.nested_parse(result, 0, node)
+        return node.children
+
+
+class WorkflowDirective(KottiAppDirective):
+    """ """
+
+    required_arguments = 1
+    has_content = False
+    directive = 'workflow'
+
+    def run(self):
+
+        node = compound()
+        dotted = self.arguments[0].split()[0]
+
+        # Get the workflow for ``dotted``.
+        try:
+            workflow = Workflow(dotted)
+        except WorkflowException as err:
+            return [node.document.reporter.warning(
+                err.args[0], line=self.lineno)]
+
+        self.rst = [
+            u'.. workflow-diagram::',
+            u'   {}'.format(dotted),
+            u''
+            u'.. workflow-permissionmapping::',
+            u'   {}'.format(dotted),
+        ]
 
         result = ViewList()
         result.append(u'', self.directive)
