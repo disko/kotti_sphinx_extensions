@@ -36,22 +36,9 @@ class KottiAppDirective(Directive):
         global kotti_app
         if kotti_app is None:
             env = self.state.document.settings.env
-            kotti_app = bootstrap(env.config.kotti_ini)
-
-
-def setup(app):
-
-    from kotti_sphinx_extensions.workflow import WorkflowDiagram
-    app.add_directive('workflow-diagram', WorkflowDiagram)
-
-    from kotti_sphinx_extensions.workflow import WorkflowPermissionMapping
-    app.add_directive('workflow-permissionmapping', WorkflowPermissionMapping)
-
-    app.add_config_value('kotti_ini', {}, False),
-
-    app.add_config_value('workflow_graph_attrs', {}, False),
-    app.add_config_value('workflow_node_attrs', {}, False),
-    app.add_config_value('workflow_edge_attrs', {}, False),
+            ini = env.config.kotti_ini
+            env.app.info('loading Kotti application from %s...' % ini)
+            kotti_app = bootstrap(ini)
 
 
 class GraphvizMixin(object):
@@ -112,3 +99,21 @@ class GraphvizMixin(object):
         res.append('}')
 
         return u'\n'.join(res)
+
+    def generate_dot_nodes(self, node_attrs):
+        raise NotImplementedError('Subclasses must implement this method')
+
+
+def setup(app):
+
+    from kotti_sphinx_extensions.workflow import WorkflowDiagram
+    app.add_directive('workflow-diagram', WorkflowDiagram)
+
+    from kotti_sphinx_extensions.workflow import WorkflowPermissionMapping
+    app.add_directive('workflow-permissionmapping', WorkflowPermissionMapping)
+
+    app.add_config_value('kotti_ini', {}, False),
+
+    app.add_config_value('workflow_graph_attrs', {}, False),
+    app.add_config_value('workflow_node_attrs', {}, False),
+    app.add_config_value('workflow_edge_attrs', {}, False),

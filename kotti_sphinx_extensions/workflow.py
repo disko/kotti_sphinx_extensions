@@ -6,7 +6,8 @@ Almost everything in this module is copied from
 
 from inspect import isclass
 
-from docutils.nodes import paragraph
+from docutils.nodes import paragraph, section, compound
+from docutils.statemachine import ViewList
 from kotti.workflow import get_workflow
 from sphinx.ext.graphviz import graphviz, figure_wrapper
 
@@ -28,7 +29,7 @@ class Workflow(GraphvizMixin):
     def __init__(self, content):
         """ *content* is either an instance, a class or a dotted name of a class
         assigned to a workflow (or not).  If it's an iterable, only consider the
-        first element.
+        fiself.rst element.
         """
 
         if isinstance(content, (list, tuple, )):
@@ -122,7 +123,7 @@ class WorkflowDiagram(KottiAppDirective):
         node = graphviz()
         dotted = self.arguments[0].split()[0]
 
-        # Create a graph for ``dotted``.
+        # Get the workflow for ``dotted``.
         try:
             workflow = Workflow(dotted)
         except WorkflowException as err:
@@ -154,72 +155,57 @@ class WorkflowPermissionMapping(KottiAppDirective):
 
     def run(self):
 
-        # schema_data_tableinfo = []
-        # for col in TABLE_COLS:
-        #     schema_data_tableinfo.append(len(col))
-        #
-        # schema_data = []
-        # schema = _resolve_dotted_name(self.name)
-        # for field in schema._fields:
-        #     field = schema.get(field)
-        #     schema_data.append([
-        #         str(field.getName()),
-        #         str(field.required),
-        #         str(field.searchable),
-        #         str(field.type),
-        #         str(field.storage.__class__.__name__),
-        #         ])
-        #
-        #     if len(str(field.getName())) > schema_data_tableinfo[0]:
-        #         schema_data_tableinfo[0] = len(str(field.getName()))
-        #     if len(str(field.required)) > schema_data_tableinfo[1]:
-        #         schema_data_tableinfo[1] = len(str(field.required))
-        #     if len(str(field.searchable)) > schema_data_tableinfo[2]:
-        #         schema_data_tableinfo[2] = len(str(field.searchable))
-        #     if len(str(field.type)) > schema_data_tableinfo[3]:
-        #         schema_data_tableinfo[3] = len(str(field.type))
-        #     if len(str(field.storage.__class__.__name__)) > schema_data_tableinfo[4]:
-        #         schema_data_tableinfo[4] = len(str(field.storage.__class__.__name__))
-        #
-        # result = ViewList()
-        # result.append(u'', '<autoatschema>')
-        # result.append(u'%s: ``%s``' % (self.name.split('.')[-1], self.name), '<autoatschema>')
-        # result.append(u'', '<autoatschema>')
-        # for line in self._buildTable('|l|c|c|l|l|', schema_data,
-        #                                 schema_data_tableinfo):
-        #     result.append(line, '<autoatschema>')
-        # result.append(u'', '<autoatschema>')
-        node = paragraph()
-        # self.state.nested_parse(result, 0, node)
+        node = compound()
+        dotted = self.arguments[0].split()[0]
+
+        # Get the workflow for ``dotted``.
+        try:
+            workflow = Workflow(dotted)
+        except WorkflowException as err:
+            return [node.document.reporter.warning(
+                err.args[0], line=self.lineno)]
+
+        self.rst = []
+
+        for state in workflow.states:
+            # section title
+            title = u'Role to Permissions mapping for state {} ({})'.format(
+                state['title'], state['name'])
+            # self.rst.append(t)
+            # self.rst.append(len(t) * '_')
+            # self.rst.append('')
+
+            # table
+            # table format
+            self.rst.append(u'.. tabularcolumns:: |R|{}|'.format(
+                u'|'.join(['C'] * len(workflow.permissions)))
+            )
+            self.rst.append(u'.. csv-table:: {}'.format(title))
+            # table header
+            thead = ['Roles / Permissions', ]
+            thead.extend([c for c in workflow.permissions])
+            self.rst.append(u'   :header: {}'.format(
+                u','.join(u'"{}"'.format(c) for c in thead)
+            ))
+            self.rst.append('')
+            # table body
+            for role in workflow.roles:
+                trow = [role, ]
+                perms = state['data'].get(u'role:{}'.format(role), u'')
+                for p in workflow.permissions:
+                    if p in perms:
+                        trow.append('Y')
+                    else:
+                        trow.append('N')
+                self.rst.append(u'   {}'.format(
+                    u','.join(u'"{}"'.format(c) for c in trow)
+                ))
+
+        result = ViewList()
+        result.append(u'', self.directive)
+        for r in self.rst:
+            result.append(r, self.directive)
+        result.append(u'', self.directive)
+
+        self.state.nested_parse(result, 0, node)
         return node.children
-
-    def _buildTable(self, specs, data, datainfo):
-        result = [u'.. tabularcolumns:: '+specs, u'']
-
-        # separator line
-        separator_line = ''
-        for colnum in datainfo:
-            separator_line += '='*colnum
-            separator_line += ' '
-        separator_line = separator_line[:-1]
-
-        # header
-        header = ''
-        for pos, col in enumerate(TABLE_COLS):
-            header += col+(datainfo[pos]-len(col))*' '
-            header += ' '
-        header = header[:-1]
-
-        result.append(separator_line)
-        result.append(header)
-        result.append(separator_line)
-
-        for data_row in data:
-            row = ''
-            for pos, data_col in enumerate(data_row):
-                row += data_col+(datainfo[pos]-len(data_col))*' '
-                row += ' '
-            result.append(row[:-1])
-
-        result.append(separator_line)
-        return result
